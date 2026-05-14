@@ -36,6 +36,32 @@
             display: flex; 
             flex-direction: row; 
             z-index: 5; 
+            visibility: hidden; /* Hidden until Start is clicked */
+        }
+
+        /* MODIFICATION: Introduction Page */
+        #intro-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 2000;
+            background: rgba(0, 151, 230, 0.9);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .intro-card {
+            background: white;
+            color: var(--dark);
+            padding: 40px;
+            border-radius: 40px;
+            border: 10px solid var(--secondary);
+            max-width: 600px;
+            box-shadow: 0 20px 0px rgba(0,0,0,0.2);
         }
 
         .team-container { 
@@ -131,6 +157,20 @@
 <body>
 
 <div id="bg-layer"></div>
+
+<div id="intro-overlay">
+    <div class="intro-card">
+        <h1 style="color: var(--primary); font-size: 2.5rem; margin-top: 0;">How to Play 🎣</h1>
+        <ul style="text-align: left; font-size: 1.2rem; line-height: 1.6;">
+            <li>Look at the <b>Question Bubble</b> at the top.</li>
+            <li>Find and click the <b>Fish</b> carrying the correct answer.</li>
+            <li>Correct catches earn you <b>Shells</b> 🐚!</li>
+            <li>Complete all levels to finish the game.</li>
+        </ul>
+        <button class="btn btn-success" style="font-size: 2rem; padding: 20px 60px; margin-top: 20px;" onclick="startGame()">START GAME ➔</button>
+    </div>
+</div>
+
 <div id="center-boundary" style="position: absolute; left: 50%; top: 0; bottom: 0; width: 6px; background: white; z-index: 100; transform: translateX(-50%); display: none;"></div>
 <button id="settings-shared" class="btn btn-primary settings-team-btn" onclick="openPanel('settings-panel')">⚙️</button>
 
@@ -212,11 +252,10 @@
     };
     
     let teamState = [
-        { score: 0, idx: 0, fish: [], order: [], paused: false },
-        { score: 0, idx: 0, fish: [], order: [], paused: false }
+        { score: 0, idx: 0, fish: [], order: [], paused: true },
+        { score: 0, idx: 0, fish: [], order: [], paused: true }
     ];
 
-    // MODIFICATION 3: Added Winner Sound Effect
     const audioObj = { 
         bg: new Audio('background music.mp3'),
         win: new Audio('correct.mp3'),
@@ -233,6 +272,16 @@
         setMode(config.mode);
         setSync(config.sync);
         requestAnimationFrame(gameLoop);
+    }
+
+    // MODIFICATION: Start Game Button Logic
+    function startGame() {
+        document.getElementById('intro-overlay').style.display = 'none';
+        document.getElementById('game-stage').style.visibility = 'visible';
+        teamState[0].paused = false;
+        teamState[1].paused = false;
+        audioObj.bg.play().catch(() => console.log("Audio needs user interaction first"));
+        resetGame();
     }
 
     function clearAllData() {
@@ -260,7 +309,6 @@
         if (t.idx >= state.questions.length) {
             document.getElementById(`f-score-${tIdx}`).innerText = t.score;
             document.getElementById(`end-${tIdx}`).style.display = 'flex';
-            // MODIFICATION 3: Play completed sound
             audioObj.completed.currentTime = 0;
             audioObj.completed.play();
             return;
@@ -317,6 +365,7 @@
         teamState.forEach((t, i) => {
             if (!t.paused && (config.mode === 'team' || i === 0)) {
                 const sideEl = document.getElementById(`team-${i}`);
+                if (!sideEl) return;
                 const w = sideEl.offsetWidth;
                 t.fish.forEach(f => {
                     f.x += f.speed * f.dir;
@@ -367,7 +416,8 @@
         document.getElementById('team-1').style.display = (m === 'team') ? 'flex' : 'none';
         document.getElementById('center-boundary').style.display = (m === 'team') ? 'block' : 'none';
         document.getElementById('settings-shared').style.display = (m === 'team') ? 'block' : 'none';
-        document.querySelector('.btn-settings-orig').style.display = (m === 'team') ? 'none' : 'block';
+        const origBtn = document.querySelector('.btn-settings-orig');
+        if(origBtn) origBtn.style.display = (m === 'team') ? 'none' : 'block';
         save();
     }
 
