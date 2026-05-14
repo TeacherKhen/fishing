@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Fishing Vocabulary Adventure - Team Edition</title>
+    <style>
+        :root {
+            --primary: #00a8ff;
+            --secondary: #fbc531;
+            --accent: #4cd137;
+            --danger: #e84118;
+            --dark: #2f3640;
+            --bubble: #ffffff;
+        }
+
+        * { 
+            box-sizing: border-box; 
+            font-family: 'Comic Sans MS', 'Chalkboard SE', cursive, sans-serif; 
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+        
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #0097e6; }
+
+        #bg-layer { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            background-image: url('underwater.gif'); 
+            background-size: 100% 100%; background-repeat: no-repeat; z-index: 1; 
+        }
+
+        #game-stage { 
+            position: relative; 
+            width: 100%; 
+            height: 100%; 
+            display: flex; 
+            flex-direction: row; 
+            z-index: 5; 
+        }
+
+        .team-container { 
+            position: relative; 
+            flex: 1; 
+            height: 100%; 
+            overflow: hidden; 
+            display: flex;
+            flex-direction: column;
+        }
+
+        .hud { 
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            display: flex; 
+            justify-content: space-around; 
+            align-items: center;
+            padding: 10px; 
+            z-index: 50; 
+            pointer-events: none; 
+        }
+        .hud > * { pointer-events: auto; }
+        
+        .sea-stat-box { 
+            background: rgba(255, 255, 255, 0.85); 
+            padding: 8px 15px; 
+            border-radius: 15px 40px 15px 40px; 
+            box-shadow: 0 4px 0px rgba(0, 119, 182, 0.4); 
+            font-weight: bold; 
+            font-size: 1.2rem; 
+            color: #0077b6; 
+            border: 3px solid #90e0ef; 
+            display: flex; 
+            align-items: center; 
+            gap: 5px;
+        }
+
+        .question-zone { position: absolute; top: 10%; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; z-index: 15; width: 95%; }
+        
+        .speech-bubble { 
+            background: var(--bubble); border-radius: 30px; padding: 20px; width: 100%; max-width: 500px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3); border: 6px solid var(--primary);
+            display: flex; align-items: center; justify-content: center; gap: 15px;
+            animation: float 3s ease-in-out infinite;
+        }
+        .q-img { max-height: 180px; width: auto; border-radius: 15px; object-fit: contain; flex-shrink: 0; }
+        .q-text { font-size: 1.8rem; color: var(--dark); margin: 0; flex-grow: 1; text-align: center; font-weight: bold;}
+
+        .fish-wrapper { position: absolute; cursor: pointer; user-select: none; display: flex; flex-direction: column; align-items: center; z-index: 10; }
+        .fish-sprite-container { width: 130px; height: 95px; }
+        .fish-sprite { width: 100%; height: 100%; object-fit: contain; }
+        
+        .fish-label { 
+            background: white; padding: 8px 15px; border-radius: 18px; font-weight: bold; font-size: 1.1rem; 
+            border: 3px solid var(--primary); box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-top: -5px;
+        }
+        .fish-label img { height: 110px; width: auto; border-radius: 8px; display: block;}
+
+        .shuffle-cont { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 60; }
+        .settings-team-btn { 
+            position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); 
+            z-index: 110; display: none; width: 60px; height: 60px; border-radius: 50%;
+            font-size: 1.8rem; border: 4px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+
+        .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 200; display: none; flex-direction: column; align-items: center; justify-content: center; background: rgba(0,0,0,0.5); }
+        .catch-screen { background-image: url('catch it.gif'); background-size: contain; background-repeat: no-repeat; background-position: center; background-color: #87CEEB; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;}
+        .end-screen { background-image: url('ending background.gif'); background-size: cover; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .overlay-content { background: rgba(255, 255, 255, 0.9); padding: 30px; border-radius: 30px; border: 8px solid var(--primary); text-align: center; }
+
+        .panel { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; max-width: 850px; max-height: 85vh; background: white; border-radius: 30px; z-index: 1000; display: none; flex-direction: column; overflow: hidden; box-shadow: 0 0 50px rgba(0,0,0,0.5); }
+        .panel.active { display: flex; animation: popUp 0.3s ease-out; }
+        .panel-header { background: var(--primary); color: white; padding: 20px; display: flex; justify-content: space-between; align-items: center; }
+        .panel-body { padding: 25px; overflow-y: auto; }
+
+        .btn { padding: 12px 25px; border: none; border-radius: 50px; cursor: pointer; font-weight: bold; transition: 0.2s; font-size: 1rem;}
+        .btn:active { transform: scale(0.95); }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-success { background: var(--accent); color: white; }
+        .btn-danger { background: var(--danger); color: white; }
+        .mode-toggle { border: 3px solid #ddd; padding: 10px 20px; border-radius: 15px; cursor: pointer; display: inline-block; margin: 5px; background: #f9f9f9; }
+        .mode-toggle.active { border-color: var(--primary); background: #e1f5fe; color: var(--primary); }
+
+        .paste-area { width: 100%; height: 120px; border: 3px dashed var(--primary); border-radius: 15px; display: flex; align-items: center; justify-content: center; margin: 10px 0; outline: none; background: #f1f8ff; overflow: hidden; }
+        .paste-area img { max-height: 95%; max-width: 95%; object-fit: contain; }
+
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
+        @keyframes popUp { 0% { transform: translate(-50%, -50%) scale(0.9); opacity: 0; } 100% { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
+    </style>
+</head>
+<body>
+
+<div id="bg-layer"></div>
+<div id="center-boundary" style="position: absolute; left: 50%; top: 0; bottom: 0; width: 6px; background: white; z-index: 100; transform: translateX(-50%); display: none;"></div>
+<button id="settings-shared" class="btn btn-primary settings-team-btn" onclick="openPanel('settings-panel')">⚙️</button>
+
+<div id="game-stage">
+    <div id="team-0" class="team-container">
+        <div class="hud">
+            <div class="sea-stat-box">🐚 Score: <span id="score-0">0</span></div>
+            <div class="sea-stat-box">🌊 <span id="prog-0">1/1</span></div>
+            <button class="btn btn-primary btn-settings-orig" onclick="openPanel('settings-panel')">⚙️ SETTINGS</button>
+        </div>
+        <div class="question-zone">
+            <div id="bubble-0" class="speech-bubble">
+                <img id="q-img-0" class="q-img" style="display:none;">
+                <p id="q-text-0" class="q-text"></p>
+            </div>
+        </div>
+        <div class="shuffle-cont"><button class="btn btn-primary" onclick="shuffleFish(0)">🔀 SHUFFLE</button></div>
+        <div id="overlay-0" class="overlay"><div class="catch-screen"><div class="overlay-content" style="margin-top:150px;"><h1>GREAT CATCH!</h1><button class="btn btn-success" onclick="nextQ(0)">NEXT QUESTION ➔</button></div></div></div>
+        <div id="end-0" class="overlay"><div class="end-screen"><div class="overlay-content"><h1>GAME COMPLETED!</h1><div style="font-size:2rem; margin:20px 0;">Final Score: <span id="f-score-0">0</span></div><button class="btn btn-primary" onclick="resetGame()">REPLAY 🔄</button></div></div></div>
+    </div>
+
+    <div id="team-1" class="team-container" style="display:none;">
+        <div class="hud">
+            <div class="sea-stat-box">🐚 Score: <span id="score-1">0</span></div>
+            <div class="sea-stat-box">🌊 <span id="prog-1">1/1</span></div>
+        </div>
+        <div class="question-zone">
+            <div id="bubble-1" class="speech-bubble">
+                <img id="q-img-1" class="q-img" style="display:none;">
+                <p id="q-text-1" class="q-text"></p>
+            </div>
+        </div>
+        <div class="shuffle-cont"><button class="btn btn-primary" onclick="shuffleFish(1)">🔀 SHUFFLE</button></div>
+        <div id="overlay-1" class="overlay"><div class="catch-screen"><div class="overlay-content" style="margin-top:150px;"><h1>GREAT CATCH!</h1><button class="btn btn-success" onclick="nextQ(1)">NEXT QUESTION ➔</button></div></div></div>
+        <div id="end-1" class="overlay"><div class="end-screen"><div class="overlay-content"><h1>GAME COMPLETED!</h1><div style="font-size:2rem; margin:20px 0;">Final Score: <span id="f-score-1">0</span></div><button class="btn btn-primary" onclick="resetGame()">REPLAY 🔄</button></div></div></div>
+    </div>
+</div>
+
+<div id="settings-panel" class="panel">
+    <div class="panel-header"><h2>Settings</h2><button class="btn btn-danger" onclick="closePanels(); resetGame();">X</button></div>
+    <div class="panel-body">
+        <h3>Game Mode</h3>
+        <div class="mode-toggle active" id="mode-single" onclick="setMode('single')">Single Player</div>
+        <div class="mode-toggle" id="mode-team" onclick="setMode('team')">Team Mode</div>
+        <div style="margin-top:10px;">
+            <div class="mode-toggle active" id="sync-on" onclick="setSync(true)">Sync Questions: ON</div>
+            <div class="mode-toggle" id="sync-off" onclick="setSync(false)">Sync Questions: OFF</div>
+        </div>
+        <hr>
+        <h3>Audio Settings</h3>
+        <button class="btn btn-success" onclick="toggleMusic()">🎵 Play/Pause Music</button>
+        <div style="margin-top:10px;">
+            <label>Music Volume: </label>
+            <input type="range" min="0" max="1" step="0.1" value="0.2" oninput="setVolume(this.value)" style="width:100%;">
+        </div>
+        <hr>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button class="btn btn-success" onclick="openPanel('editor-panel')">📝 Edit/Add Questions</button>
+            <button class="btn btn-primary" onclick="exportJSON()">💾 Export File</button>
+            <label class="btn btn-primary">📂 Load File <input type="file" accept=".json" style="display:none;" onchange="importJSON(event)"></label>
+            <button class="btn btn-danger" style="background: #c0392b;" onclick="clearAllData()">🗑️ CLEAR ALL DATA</button>
+        </div>
+    </div>
+</div>
+
+<div id="editor-panel" class="panel">
+    <div class="panel-header"><h2>Question Editor</h2><button class="btn btn-success" onclick="openPanel('settings-panel')">Done</button></div>
+    <div id="editor-container" class="panel-body"></div>
+    <div style="padding:20px; border-top:1px solid #eee;">
+        <button class="btn btn-success" onclick="addBlankQuestion()">+ Add New Question</button>
+    </div>
+</div>
+
+<script>
+    const FISH_SPRITES = ['fish 1.jpg', 'fish 2.png', 'fish 3.png', 'fish 4.gif'];
+    let config = { mode: 'single', sync: true };
+    let state = {
+        questions: [{ text: "Example: Catch the Shark!", img: "", options: [{ text: "Shark", img: "", correct: true }, { text: "Whale", img: "", correct: false }, { text: "Crab", img: "", correct: false }, { text: "Jellyfish", img: "", correct: false }] }]
+    };
+    
+    let teamState = [
+        { score: 0, idx: 0, fish: [], order: [], paused: false },
+        { score: 0, idx: 0, fish: [], order: [], paused: false }
+    ];
+
+    // MODIFICATION 3: Added Winner Sound Effect
+    const audioObj = { 
+        bg: new Audio('background music.mp3'),
+        win: new Audio('correct.mp3'),
+        fail: new Audio('wrong answer sound effect.mp3'),
+        completed: new Audio('winner sound effect.mp3') 
+    };
+    audioObj.bg.loop = true; audioObj.bg.volume = 0.2;
+
+    function init() {
+        const s = localStorage.getItem('fishGameV4_State');
+        const c = localStorage.getItem('fishGameV4_Cfg');
+        if (s) state = JSON.parse(s);
+        if (c) config = JSON.parse(c);
+        setMode(config.mode);
+        setSync(config.sync);
+        requestAnimationFrame(gameLoop);
+    }
+
+    function clearAllData() {
+        if(confirm("Delete everything? This is permanent!")) {
+            localStorage.clear();
+            location.reload();
+        }
+    }
+
+    function resetGame() {
+        teamState.forEach((t, i) => {
+            t.score = 0; t.idx = 0; t.paused = false;
+            t.order = [...Array(state.questions.length).keys()];
+            if (!config.sync) t.order.sort(() => Math.random() - 0.5);
+            document.getElementById(`score-${i}`).innerText = "0";
+            document.getElementById(`overlay-${i}`).style.display = 'none';
+            document.getElementById(`end-${i}`).style.display = 'none';
+        });
+        renderTeam(0);
+        if (config.mode === 'team') renderTeam(1);
+    }
+
+    function renderTeam(tIdx) {
+        const t = teamState[tIdx];
+        if (t.idx >= state.questions.length) {
+            document.getElementById(`f-score-${tIdx}`).innerText = t.score;
+            document.getElementById(`end-${tIdx}`).style.display = 'flex';
+            // MODIFICATION 3: Play completed sound
+            audioObj.completed.currentTime = 0;
+            audioObj.completed.play();
+            return;
+        }
+
+        const q = state.questions[t.order[t.idx]];
+        const bubble = document.getElementById(`bubble-${tIdx}`);
+        const textEl = document.getElementById(`q-text-${tIdx}`);
+        const imgEl = document.getElementById(`q-img-${tIdx}`);
+
+        textEl.innerText = q.text || "";
+        imgEl.src = q.img || "";
+        
+        if (q.img && q.text) { imgEl.style.display = 'block'; textEl.style.display = 'block'; }
+        else if (q.img) { imgEl.style.display = 'block'; textEl.style.display = 'none'; }
+        else { imgEl.style.display = 'none'; textEl.style.display = 'block'; }
+
+        document.getElementById(`prog-${tIdx}`).innerText = `${t.idx + 1}/${state.questions.length}`;
+        spawnFish(tIdx, q);
+        t.paused = false;
+    }
+
+    function spawnFish(tIdx, q) {
+        const side = document.getElementById(`team-${tIdx}`);
+        side.querySelectorAll('.fish-wrapper').forEach(f => f.remove());
+        teamState[tIdx].fish = [];
+
+        q.options.forEach((opt, i) => {
+            const wrap = document.createElement('div');
+            wrap.className = 'fish-wrapper';
+            wrap.innerHTML = `
+                <div class="fish-sprite-container"><img src="${FISH_SPRITES[i % 4]}" class="fish-sprite"></div>
+                <div class="fish-label">${opt.img ? `<img src="${opt.img}">` : `<span>${opt.text}</span>`}</div>
+            `;
+            
+            const data = {
+                x: Math.random() * (side.offsetWidth - 160),
+                y: 280 + (Math.random() * (side.offsetHeight - 500)),
+                speed: 1.2 + Math.random() * 1.5,
+                dir: Math.random() > 0.5 ? 1 : -1,
+                el: wrap
+            };
+            
+            const handleInteract = (e) => { e.preventDefault(); checkHit(tIdx, opt.correct, wrap); };
+            wrap.addEventListener('touchstart', handleInteract, {passive: false});
+            wrap.addEventListener('mousedown', handleInteract);
+
+            side.appendChild(wrap);
+            teamState[tIdx].fish.push(data);
+        });
+    }
+
+    function gameLoop() {
+        teamState.forEach((t, i) => {
+            if (!t.paused && (config.mode === 'team' || i === 0)) {
+                const sideEl = document.getElementById(`team-${i}`);
+                const w = sideEl.offsetWidth;
+                t.fish.forEach(f => {
+                    f.x += f.speed * f.dir;
+                    if (f.x > w - 150 || f.x < 0) f.dir *= -1;
+                    f.el.style.left = f.x + 'px';
+                    f.el.style.top = (f.y + Math.sin(Date.now()/600) * 12) + 'px';
+                    f.el.querySelector('.fish-sprite-container').style.transform = `scaleX(${f.dir * -1})`;
+                });
+            }
+        });
+        requestAnimationFrame(gameLoop);
+    }
+
+    function checkHit(tIdx, isCorrect, el) {
+        if (teamState[tIdx].paused) return;
+        if (isCorrect) {
+            teamState[tIdx].paused = true;
+            audioObj.win.currentTime = 0; audioObj.win.play();
+            teamState[tIdx].score++;
+            document.getElementById(`score-${tIdx}`).innerText = teamState[tIdx].score;
+            document.getElementById(`overlay-${tIdx}`).style.display = 'flex';
+        } else {
+            teamState[tIdx].paused = true;
+            audioObj.fail.currentTime = 0; audioObj.fail.play();
+            el.style.filter = 'grayscale(1) brightness(0.5)';
+            setTimeout(() => { teamState[tIdx].paused = false; el.style.filter = ''; }, 2000);
+        }
+    }
+
+    function nextQ(tIdx) {
+        document.getElementById(`overlay-${tIdx}`).style.display = 'none';
+        teamState[tIdx].idx++;
+        renderTeam(tIdx);
+    }
+
+    function shuffleFish(tIdx) {
+        const side = document.getElementById(`team-${tIdx}`);
+        teamState[tIdx].fish.forEach(f => {
+            f.x = Math.random() * (side.offsetWidth - 160);
+            f.y = 280 + (Math.random() * (side.offsetHeight - 500));
+        });
+    }
+
+    function setMode(m) {
+        config.mode = m;
+        document.querySelectorAll('#mode-single, #mode-team').forEach(e => e.classList.remove('active'));
+        document.getElementById(`mode-${m}`).classList.add('active');
+        document.getElementById('team-1').style.display = (m === 'team') ? 'flex' : 'none';
+        document.getElementById('center-boundary').style.display = (m === 'team') ? 'block' : 'none';
+        document.getElementById('settings-shared').style.display = (m === 'team') ? 'block' : 'none';
+        document.querySelector('.btn-settings-orig').style.display = (m === 'team') ? 'none' : 'block';
+        save();
+    }
+
+    function setSync(val) {
+        config.sync = val;
+        document.getElementById('sync-on').classList.toggle('active', val);
+        document.getElementById('sync-off').classList.toggle('active', !val);
+        save();
+    }
+
+    async function handlePasteEvent(e, qIdx, oIdx) {
+        const item = Array.from(e.clipboardData.items).find(x => x.type.indexOf("image") !== -1);
+        if (item) {
+            const reader = new FileReader();
+            reader.onload = async (ev) => {
+                const img = new Image();
+                img.src = ev.target.result;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let w = img.width, h = img.height;
+                    if (w > 500) { h = (500/w)*h; w = 500; }
+                    canvas.width = w; canvas.height = h;
+                    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                    const comp = canvas.toDataURL('image/jpeg', 0.7);
+                    if (oIdx === -1) state.questions[qIdx].img = comp;
+                    else state.questions[qIdx].options[oIdx].img = comp;
+                    save(); renderEditor();
+                };
+            };
+            reader.readAsDataURL(item.getAsFile());
+        }
+    }
+
+    function renderEditor() {
+        const container = document.getElementById('editor-container');
+        container.innerHTML = '';
+        state.questions.forEach((q, qIdx) => {
+            const card = document.createElement('div');
+            card.style = "background:#f9f9f9; border:2px solid #ddd; border-radius:15px; padding:15px; margin-bottom:15px;";
+            card.innerHTML = `
+                <div style="display:flex; justify-content:space-between"><b>Q${qIdx+1}</b><button class="btn-danger" onclick="state.questions.splice(${qIdx},1); save(); renderEditor();">Remove</button></div>
+                <input type="text" value="${q.text}" onchange="state.questions[${qIdx}].text=this.value; save();" style="width:100%; margin:8px 0; padding:8px;">
+                <div class="paste-area" tabindex="0" onpaste="handlePasteEvent(event, ${qIdx}, -1)">
+                    ${q.img ? `<img src="${q.img}">` : 'Paste Question Image Here'}
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px;">
+                    ${q.options.map((o, oIdx) => `
+                        <div style="background:white; border:1px solid #ccc; padding:8px; border-radius:10px;">
+                            <label><input type="radio" name="r-${qIdx}" ${o.correct?'checked':''} onchange="setCorr(${qIdx}, ${oIdx})"> Correct</label>
+                            <input type="text" value="${o.text}" onchange="state.questions[${qIdx}].options[${oIdx}].text=this.value; save();" style="width:100%;">
+                            <div class="paste-area" tabindex="0" style="height:60px;" onpaste="handlePasteEvent(event, ${qIdx}, ${oIdx})">
+                                ${o.img ? `<img src="${o.img}">` : 'Paste Img'}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            container.appendChild(card);
+        });
+    }
+
+    function setCorr(qIdx, oIdx) { state.questions[qIdx].options.forEach((o, i) => o.correct = (i === oIdx)); save(); }
+    function addBlankQuestion() { state.questions.push({ text: "New Question", img: "", options: [{text:"Correct",correct:true},{text:"Wrong",correct:false},{text:"Wrong",correct:false},{text:"Wrong",correct:false}] }); save(); renderEditor(); }
+    function openPanel(id) { closePanels(); document.getElementById(id).classList.add('active'); if(id === 'editor-panel') renderEditor(); }
+    function closePanels() { document.querySelectorAll('.panel').forEach(p => p.classList.remove('active')); }
+    function save() { 
+        localStorage.setItem('fishGameV4_State', JSON.stringify(state)); 
+        localStorage.setItem('fishGameV4_Cfg', JSON.stringify(config));
+    }
+    function toggleMusic() { audioObj.bg.paused ? audioObj.bg.play() : audioObj.bg.pause(); }
+    function setVolume(v) { audioObj.bg.volume = v; }
+    function exportJSON() { const blob = new Blob([JSON.stringify(state)], {type:'application/json'}); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'fish_game.json'; a.click(); }
+    function importJSON(e) { const reader = new FileReader(); reader.onload = (ev) => { state = JSON.parse(ev.target.result); save(); location.reload(); }; reader.readAsText(e.target.files[0]); }
+
+    window.onload = init;
+</script>
+</body>
+</html>
