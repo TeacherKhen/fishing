@@ -493,6 +493,113 @@
     function importJSON(e) { const reader = new FileReader(); reader.onload = (ev) => { state = JSON.parse(ev.target.result); save(); location.reload(); }; reader.readAsText(e.target.files[0]); }
 
     window.onload = init;
+    
+/* =====================================================
+   TEACHER KHEN COMMUNITY
+   FISHING VOCABULARY ADVENTURE CONNECTOR
+   ===================================================== */
+
+(function () {
+  "use strict";
+
+  const PREFIX = "TK_FISHING";
+
+  const COMMUNITY_ORIGIN = "https://teacherkhen.com";
+
+  const protocol = {
+    ready: PREFIX + "_READY",
+    load: PREFIX + "_LESSON",
+    loaded: PREFIX + "_LOADED",
+    error: PREFIX + "_ERROR"
+  };
+
+  // Only activate when opened by Teacher Khen Community.
+  if (
+    window.location.hash !== "#tk-community" ||
+    !window.opener
+  ) {
+    return;
+  }
+
+  function notify(type, extra = {}) {
+    window.opener.postMessage(
+      { type, ...extra },
+      COMMUNITY_ORIGIN
+    );
+  }
+
+  function validateLesson(data) {
+    return (
+      data &&
+      !Array.isArray(data) &&
+      Array.isArray(data.questions) &&
+      data.questions.length > 0 &&
+      data.questions.every(q =>
+        q &&
+        typeof q.text === "string" &&
+        Array.isArray(q.options) &&
+        q.options.length === 4 &&
+        q.options.every(o =>
+          o &&
+          typeof o.text === "string" &&
+          typeof o.correct === "boolean"
+        ) &&
+        q.options.filter(o => o.correct).length === 1
+      )
+    );
+  }
+
+  window.addEventListener("message", function (event) {
+
+    // Reject messages from other websites.
+    if (
+      event.origin !== COMMUNITY_ORIGIN ||
+      event.source !== window.opener
+    ) {
+      return;
+    }
+
+    if (event.data?.type !== protocol.load) {
+      return;
+    }
+
+    try {
+      const lesson = event.data.lesson;
+
+      if (!validateLesson(lesson)) {
+        throw new Error("Invalid Fishing Adventure JSON.");
+      }
+
+      // Preserve the game's original question structure.
+      state.questions = structuredClone(lesson.questions);
+
+      // Save using the game's existing storage functions.
+      save();
+
+      // Restart the fishing game with Community questions.
+      resetGame();
+
+      notify(protocol.loaded);
+
+    } catch (error) {
+
+      console.error(
+        "Fishing Community loading failed:",
+        error
+      );
+
+      notify(protocol.error, {
+        message: error.message || "Unable to load lesson."
+      });
+    }
+  });
+
+  // Inform Community that the game is ready.
+  window.addEventListener("load", function () {
+    notify(protocol.ready);
+  });
+
+})();
 </script>
 </body>
 </html>
